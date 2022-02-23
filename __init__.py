@@ -5,6 +5,7 @@ from mycroft import MycroftSkill, intent_handler
 from mycroft.skills.core import FallbackSkill
 from mycroft.util.format import nice_number
 from quantulum3 import parser
+from joi_skill_utils.enviro import get_setting
 from requests.exceptions import (HTTPError, InvalidURL, RequestException,
                                  SSLError, Timeout, URLRequired)
 # pylint: disable=E0401
@@ -29,39 +30,19 @@ class HomeAssistantSkill(FallbackSkill):
         self.enable_fallback = False
 
     def _setup(self, force=False):
-        if self.settings is not None and (force or self.ha_client is None):
+        self.log.info('_setup')
+
+        if (force or self.ha_client is None):
             # Check if user filled IP, port and Token in configuration
-            ip_address = check_url(str(self.settings.get('host')))
-            token = self.settings.get('token')
-
-            """Inform user if ip/url or token not or incorrectly filed"""
-            if not ip_address:
-
-                self.speak_dialog('homeassistant.error.setup', data={
-                              "field": "I.P."})
-                return
-
-            if not token:
-                self.speak_dialog('homeassistant.error.setup', data={
-                              "field": "token"})
-                return
-
-            port_number = self.settings.get('portnum')
-            try:
-                port_number = int(port_number)
-            except TypeError:
-                port_number = 8123
-            except ValueError:
-                # String might be some rubbish (like '')
-                self.speak_dialog('homeassistant.error.setup', data={
-                              "field": "port"})
-                return
+            ip_address = 'localhost'
+            token = get_setting('homeassistant_token')
+            port_number = 8123
 
             config = {'ip_address': ip_address,
                       'token': token,
                       'port_number': port_number,
-                      'ssl': self.settings.get('ssl'),
-                      'verify': self.settings.get('verify'),
+                      'ssl': False,
+                      'verify': True,
                       }
 
             self.ha_client = HomeAssistantClient(config)
@@ -73,8 +54,7 @@ class HomeAssistantSkill(FallbackSkill):
                     'conversation'
                 )
                 if conversation_activated:
-                    self.enable_fallback = \
-                        self.settings.get('enable_fallback')
+                    self.enable_fallback = True
 
     def _force_setup(self):
         self.log.debug('Creating a new HomeAssistant-Client')
