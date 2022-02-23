@@ -70,6 +70,9 @@ class HomeAssistantSkill(FallbackSkill):
         # Check and then monitor for credential changes
         # pylint: disable=W0201
         self.settings_change_callback = self.on_websettings_changed
+
+        self.add_event("skill.homeassistant.turn_action", self._handle_external_message)
+
         self._setup()
 
     def on_websettings_changed(self):
@@ -248,7 +251,10 @@ class HomeAssistantSkill(FallbackSkill):
         message.data["Entity"] = message.data.get("entity")
         self._handle_shopping_list(message)
 
-    def _handle_turn_actions(self, message):
+    def _handle_external_message(self, message):
+        self._handle_turn_actions(message,silent=True)
+
+    def _handle_turn_actions(self, message, silent=False):
         """Handler for turn on/off and toggle actions."""
         self.log.debug("Starting Switch Intent")
         entity = message.data["Entity"]
@@ -270,7 +276,8 @@ class HomeAssistantSkill(FallbackSkill):
                 ha_data = {'entity_id': 'all'}
 
                 self.ha_client.execute_service(domain, "turn_{action}", ha_data)
-                self.speak_dialog(f'homeassistant.device.{action}', data=ha_entity)
+                if not silent:
+                    self.speak_dialog(f'homeassistant.device.{action}', data=ha_entity)
                 return
         # TODO: need to figure out, if this indeed throws a KeyError
         except KeyError:
@@ -305,7 +312,8 @@ class HomeAssistantSkill(FallbackSkill):
         # self.set_context('Entity', ha_entity['dev_name'])
         if ha_entity['state'] == action:
             self.log.debug("Entity in requested state")
-            self.speak_dialog('homeassistant.device.already', data={
+            if not silent:
+                self.speak_dialog('homeassistant.device.already', data={
                 "dev_name": ha_entity['dev_name'], 'action': action})
         elif action == "toggle":
             self.ha_client.execute_service("homeassistant", "toggle",
@@ -314,10 +322,12 @@ class HomeAssistantSkill(FallbackSkill):
                 action = 'on'
             else:
                 action = 'off'
-            self.speak_dialog(f'homeassistant.device.{action}',
+            if not silent:
+                self.speak_dialog(f'homeassistant.device.{action}',
                               data=ha_entity)
         elif action in ["on", "off"]:
-            self.speak_dialog(f'homeassistant.device.{action}',
+            if not silent:
+                self.speak_dialog(f'homeassistant.device.{action}',
                               data=ha_entity)
             self.ha_client.execute_service("homeassistant", f"turn_{action}",
                                            ha_data)
