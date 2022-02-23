@@ -1,6 +1,7 @@
 """
 Home Assistant skill
 """  # pylint: disable=C0103
+from pickle import FALSE
 from mycroft import MycroftSkill, intent_handler
 from mycroft.skills.core import FallbackSkill
 from mycroft.util.format import nice_number
@@ -16,7 +17,7 @@ __author__ = 'robconnolly, btotharye, nielstron'
 
 # Timeout time for HA requests
 TIMEOUT = 10
-
+SPEAK_ENABLED = False
 
 # pylint: disable=R0912, W0105, W0511, W0233
 class HomeAssistantSkill(FallbackSkill):
@@ -290,7 +291,8 @@ class HomeAssistantSkill(FallbackSkill):
                 ha_data = {'entity_id': 'all'}
 
                 self.ha_client.execute_service(domain, "turn_{action}", ha_data)
-                self.speak_dialog(f'homeassistant.device.{action}', data=ha_entity)
+                if SPEAK_ENABLED:
+                    self.speak_dialog(f'homeassistant.device.{action}', data=ha_entity)
                 return
         # TODO: need to figure out, if this indeed throws a KeyError
         except KeyError:
@@ -325,8 +327,9 @@ class HomeAssistantSkill(FallbackSkill):
         # self.set_context('Entity', ha_entity['dev_name'])
         if ha_entity['state'] == action:
             self.log.debug("Entity in requested state")
-            self.speak_dialog('homeassistant.device.already', data={
-                "dev_name": ha_entity['dev_name'], 'action': action})
+            if SPEAK_ENABLED:
+                self.speak_dialog('homeassistant.device.already', data={
+                    "dev_name": ha_entity['dev_name'], 'action': action})
         elif action == "toggle":
             self.ha_client.execute_service("homeassistant", "toggle",
                                            ha_data)
@@ -334,10 +337,12 @@ class HomeAssistantSkill(FallbackSkill):
                 action = 'on'
             else:
                 action = 'off'
-            self.speak_dialog(f'homeassistant.device.{action}',
-                              data=ha_entity)
+            if SPEAK_ENABLED:                
+                self.speak_dialog(f'homeassistant.device.{action}',
+                                data=ha_entity)
         elif action in ["on", "off"]:
-            self.speak_dialog(f'homeassistant.device.{action}',
+            if SPEAK_ENABLED:
+                self.speak_dialog(f'homeassistant.device.{action}',
                               data=ha_entity)
             self.ha_client.execute_service("homeassistant", f"turn_{action}",
                                            ha_data)
@@ -375,7 +380,8 @@ class HomeAssistantSkill(FallbackSkill):
         # Set values for Mycroft reply
         ha_data['dev_name'] = ha_entity['dev_name']
         ha_data['brightness'] = brightness_req
-        self.speak_dialog('homeassistant.brightness.dimmed',
+        if SPEAK_ENABLED:
+            self.speak_dialog('homeassistant.brightness.dimmed',
                           data=ha_data)
 
         return
@@ -423,10 +429,12 @@ class HomeAssistantSkill(FallbackSkill):
                 return
 
             if action == "open":
-                self.speak_dialog("homeassistant.device.opening",
+                if SPEAK_ENABLED:
+                    self.speak_dialog("homeassistant.device.opening",
                                   data=ha_entity)
             elif action == "close":
-                self.speak_dialog("homeassistant.device.closing",
+                if SPEAK_ENABLED:
+                    self.speak_dialog("homeassistant.device.closing",
                                   data=ha_entity)
             return
 
@@ -452,7 +460,8 @@ class HomeAssistantSkill(FallbackSkill):
             if response.status_code != 200:
                 return
 
-            self.speak_dialog("homeassistant.device.stopped",
+            if SPEAK_ENABLED:
+                self.speak_dialog("homeassistant.device.stopped",
                               data=ha_entity)
             return
 
@@ -484,14 +493,16 @@ class HomeAssistantSkill(FallbackSkill):
 
         if action == "down":
             if ha_entity['state'] == "off":
-                self.speak_dialog('homeassistant.brightness.cantdim.off',
+                if SPEAK_ENABLED:
+                    self.speak_dialog('homeassistant.brightness.cantdim.off',
                                   data=ha_entity)
             else:
                 light_attrs = self.ha_client.find_entity_attr(ha_entity['id'])
                 if light_attrs['unit_measure'] == "":
-                    self.speak_dialog(
-                        'homeassistant.brightness.cantdim.dimmable',
-                        data=ha_entity)
+                    if SPEAK_ENABLED:
+                        self.speak_dialog(
+                            'homeassistant.brightness.cantdim.dimmable',
+                            data=ha_entity)
                 else:
                     ha_data['brightness'] = light_attrs['unit_measure'] - brightness_value
                     if ha_data['brightness'] < min_brightness:
@@ -501,19 +512,22 @@ class HomeAssistantSkill(FallbackSkill):
                                                    ha_data)
                     ha_data['dev_name'] = ha_entity['dev_name']
                     ha_data['brightness'] = round(100 / max_brightness * ha_data['brightness'])
-                    self.speak_dialog('homeassistant.brightness.decreased',
+                    if SPEAK_ENABLED:
+                        self.speak_dialog('homeassistant.brightness.decreased',
                                       data=ha_data)
         elif action == "up":
             if ha_entity['state'] == "off":
-                self.speak_dialog(
-                    'homeassistant.brightness.cantdim.off',
-                    data=ha_entity)
+                if SPEAK_ENABLED:
+                    self.speak_dialog(
+                        'homeassistant.brightness.cantdim.off',
+                        data=ha_entity)
             else:
                 light_attrs = self.ha_client.find_entity_attr(ha_entity['id'])
                 if light_attrs['unit_measure'] == "":
-                    self.speak_dialog(
-                        'homeassistant.brightness.cantdim.dimmable',
-                        data=ha_entity)
+                    if SPEAK_ENABLED:
+                        self.speak_dialog(
+                            'homeassistant.brightness.cantdim.dimmable',
+                            data=ha_entity)
                 else:
                     ha_data['brightness'] = light_attrs['unit_measure'] + brightness_value
                     if ha_data['brightness'] > max_brightness:
@@ -523,7 +537,8 @@ class HomeAssistantSkill(FallbackSkill):
                                                    ha_data)
                     ha_data['dev_name'] = ha_entity['dev_name']
                     ha_data['brightness'] = round(100 / max_brightness * ha_data['brightness'])
-                    self.speak_dialog('homeassistant.brightness.increased',
+                    if SPEAK_ENABLED:
+                        self.speak_dialog('homeassistant.brightness.increased',
                                       data=ha_data)
         else:
             self.speak_dialog('homeassistant.error.sorry')
@@ -550,15 +565,18 @@ class HomeAssistantSkill(FallbackSkill):
         self.log.debug("Triggered automation/scene/script: %s", ha_entity['id'])
         if "automation" in ha_entity['id']:
             self.ha_client.execute_service('automation', 'trigger', ha_data)
-            self.speak_dialog('homeassistant.automation.trigger',
+            if SPEAK_ENABLED:
+                self.speak_dialog('homeassistant.automation.trigger',
                               data={"dev_name": ha_entity['dev_name']})
         elif "script" in ha_entity['id']:
-            self.speak_dialog('homeassistant.automation.trigger',
+            if SPEAK_ENABLED:
+                self.speak_dialog('homeassistant.automation.trigger',
                               data={"dev_name": ha_entity['dev_name']})
             self.ha_client.execute_service("script", "turn_on",
                                            data=ha_data)
         elif "scene" in ha_entity['id']:
-            self.speak_dialog('homeassistant.scene.on',
+            if SPEAK_ENABLED:
+                self.speak_dialog('homeassistant.scene.on',
                               data=ha_entity)
             self.ha_client.execute_service("scene", "turn_on",
                                            data=ha_data)
