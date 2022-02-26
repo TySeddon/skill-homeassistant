@@ -139,6 +139,7 @@ class HomeAssistantSkill(FallbackSkill):
                     'reason': error.response.reason})
         except (ConnectionError, RequestException) as exception:
             # TODO find a nice member of any exception to output
+            self.log.error(f"Cannot connect to Home Assistant {exception.request.url}")
             if not silent:
                 self.speak_dialog('homeassistant.error', data={
                         'url': exception.request.url})
