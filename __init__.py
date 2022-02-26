@@ -86,14 +86,14 @@ class HomeAssistantSkill(FallbackSkill):
     # Creates dialogs for errors and speaks them
     # Returns None if nothing was found
     # Else returns entity that was found
-    def _find_entity(self, entity, domains):
+    def _find_entity(self, entity, domains, silent=False):
         self._setup()
         if self.ha_client is None:
             self.speak_dialog('homeassistant.error.setup')
             return False
         # TODO if entity is 'all', 'any' or 'every' turn on
         # every single entity not the whole group
-        ha_entity = self._handle_client_exception(self.ha_client.find_entity,
+        ha_entity = self._handle_client_exception(self.ha_client.find_entity,silent,
                                                   entity, domains)
         if ha_entity is None:
             self.speak_dialog('homeassistant.error.device.unknown', data={
@@ -115,7 +115,7 @@ class HomeAssistantSkill(FallbackSkill):
         return True
 
     # Calls passed method and catches often occurring exceptions
-    def _handle_client_exception(self, callback, *args, **kwargs):
+    def _handle_client_exception(self, callback, silent, *args, **kwargs):
         try:
             return callback(*args, **kwargs)
         except Timeout:
@@ -139,8 +139,9 @@ class HomeAssistantSkill(FallbackSkill):
                     'reason': error.response.reason})
         except (ConnectionError, RequestException) as exception:
             # TODO find a nice member of any exception to output
-            self.speak_dialog('homeassistant.error', data={
-                    'url': exception.request.url})
+            if not silent:
+                self.speak_dialog('homeassistant.error', data={
+                        'url': exception.request.url})
 
         return False
 
@@ -297,7 +298,7 @@ class HomeAssistantSkill(FallbackSkill):
                 'scene',
                 'input_boolean',
                 'climate'
-            ]
+            ],silent=silent
         )
 
         # Exit if entity not found or is unavailabe
@@ -731,6 +732,7 @@ class HomeAssistantSkill(FallbackSkill):
         # pass message to HA-server
         response = self._handle_client_exception(
             self.ha_client.engage_conversation,
+            False,
             message.data.get('utterance'))
         if not response:
             return False
