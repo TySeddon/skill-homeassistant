@@ -96,7 +96,9 @@ class HomeAssistantSkill(FallbackSkill):
         ha_entity = self._handle_client_exception(self.ha_client.find_entity,silent,
                                                   entity, domains)
         if ha_entity is None:
-            self.speak_dialog('homeassistant.error.device.unknown', data={
+            self.log.warn(f"Cannot find smart home entity '{entity}'")
+            if not silent:
+                self.speak_dialog('homeassistant.error.device.unknown', data={
                               "dev_name": entity})
         return ha_entity
 
